@@ -1356,6 +1356,7 @@ private struct AppsTab: View {
 struct SettingsTab: View {
     @ObservedObject var preferences: Preferences
     @ObservedObject var engine: MetricsEngine
+    @ObservedObject var updater = Updater.shared
 
     /// Mirrors the system's own answer rather than a saved setting, because the
     /// user can change this in System Settings without the app hearing about it.
@@ -1490,11 +1491,52 @@ struct SettingsTab: View {
             .onAppear { launchAtLogin = LaunchAtLogin.isEnabled }
 
             Card(title: "Gauge") {
-                Button("Quit Gauge") { NSApplication.shared.terminate(nil) }
-                    .controlSize(.small)
+                HStack {
+                    Button("Check for Updates") { updater.check() }
+                        .controlSize(.small)
+                        .disabled(updater.state == .checking || updater.state == .installing)
+                    Spacer()
+                    Button("Quit Gauge") { NSApplication.shared.terminate(nil) }
+                        .controlSize(.small)
+                }
+                updateStatus
             }
         }
         .environment(\.prominentCardTitles, true)
+    }
+
+    // MARK: Updates
+
+    /// What the last check found, and the button to install a newer version.
+    /// Nothing is shown until a check has been asked for.
+    @ViewBuilder private var updateStatus: some View {
+        switch updater.state {
+        case .idle:
+            EmptyView()
+        case .checking:
+            statusLine("Checking for updates\u{2026}", color: .secondary)
+        case .upToDate(let version):
+            statusLine("Gauge \(version) is the newest version.", color: .secondary)
+        case .available(let version, let tag):
+            HStack(alignment: .firstTextBaseline) {
+                statusLine("Gauge \(version) is available.", color: .primary)
+                Spacer(minLength: 8)
+                Button("Install and Relaunch") { updater.install(tag: tag, version: version) }
+                    .controlSize(.small)
+            }
+        case .installing:
+            statusLine("Downloading and checking the update\u{2026} Gauge will reopen by itself.",
+                       color: .secondary)
+        case .failed(let message):
+            statusLine(message, color: .orange)
+        }
+    }
+
+    private func statusLine(_ text: String, color: Color) -> some View {
+        Text(text)
+            .font(.system(size: 10))
+            .foregroundStyle(color)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     // MARK: Notifications

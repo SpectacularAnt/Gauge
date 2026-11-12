@@ -1,7 +1,16 @@
 #!/bin/bash
 # Builds Gauge and installs it to /Applications.  Usage: ./build.sh
+#
+#   ./build.sh --bundle-only DIR   builds and signs Gauge.app into DIR and
+#                                  stops there, leaving the installed copy
+#                                  alone. release.sh uses this.
 set -euo pipefail
 cd "$(dirname "$0")"
+
+BUNDLE_ONLY=""
+if [ "${1:-}" = "--bundle-only" ]; then
+  BUNDLE_ONLY="${2:?--bundle-only needs a folder}"
+fi
 
 DEST="/Applications/Gauge.app"
 
@@ -48,6 +57,14 @@ fi
 # An ad-hoc signature is enough for a local build, and is what lets macOS
 # remember Gauge as a login item between launches.
 codesign --force --sign - --identifier local.gauge "$BUNDLE"
+
+if [ -n "$BUNDLE_ONLY" ]; then
+  mkdir -p "$BUNDLE_ONLY"
+  rm -rf "$BUNDLE_ONLY/Gauge.app"
+  ditto --noextattr --norsrc "$BUNDLE" "$BUNDLE_ONLY/Gauge.app"
+  echo "Built $BUNDLE_ONLY/Gauge.app"
+  exit 0
+fi
 
 # A running copy cannot be replaced in place.
 if pgrep -f "Gauge.app/Contents/MacOS/Gauge" > /dev/null; then

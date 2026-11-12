@@ -731,6 +731,38 @@ If you change the icon and macOS keeps showing the old one, it is cached by
 path. `build.sh` already runs `touch` and `lsregister -f` after installing,
 which is usually enough.
 
+## Updating
+
+**Settings > Gauge > Check for Updates** asks GitHub for the newest
+published version. If it is newer than the one running, **Install and
+Relaunch** downloads it, checks it, and swaps it in:
+
+1. The release's `Gauge.zip` is downloaded and unpacked into a temporary
+   folder.
+2. It must be Gauge (bundle identifier `local.gauge`), the version the release
+   promised, and carry an intact signature; anything damaged or swapped on the
+   way fails here and nothing is replaced.
+3. Gauge quits, and a small script waits until it has, moves the old app
+   aside, copies the new one into its place and opens it. If the copy fails
+   the old app is put back, so a failed update leaves Gauge as it was.
+
+The repository is private, and GitHub only answers someone signed in. Rather
+than keep a token of its own, Gauge asks the GitHub command-line tool, `gh`,
+which keeps its sign-in in the keychain. So checking needs `gh` installed and
+signed in (`gh auth login`); without it, Settings says so.
+
+### Publishing a new version
+
+```bash
+./release.sh 1.2
+```
+
+sets the version in `Resources/Info.plist`, builds and signs Gauge without
+touching the installed copy (`./build.sh --bundle-only`), zips it, commits and
+tags `v1.2`, pushes, and creates the GitHub release with `Gauge.zip` attached.
+It refuses to run with uncommitted changes, so a release always matches the
+code in its tag. `NOTES="..." ./release.sh 1.2` sets the release notes.
+
 ## Building
 
 `build.sh` compiles with `swiftc` directly — no Xcode project, no packages, no
