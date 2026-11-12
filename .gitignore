@@ -1,0 +1,7 @@
+# Built apps and the zip made for copying to another Mac. Rebuild with build.sh.
+dist/
+build/
+*.app
+
+# macOS folder clutter
+.DS_Store
